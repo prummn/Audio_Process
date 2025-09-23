@@ -24,8 +24,6 @@ def process(y, sr, use_white_noise=False, noise_category=None, noise_file=None, 
     np.ndarray: 添加噪声后的音频数据。
     """
     noise_path = None
-
-    # 获取主噪音目录
     noise_dir = kwargs.get("noise_dir", "noises")
 
     if noise_category:
@@ -34,30 +32,37 @@ def process(y, sr, use_white_noise=False, noise_category=None, noise_file=None, 
             print(f"⚠️ 警告 (add_noise): 找不到噪音类别目录 '{category_path}'，跳过此效果。")
             return y
 
-        # 从类别目录中随机选择一个 .wav 文件
-        available_noises = [f for f in os.listdir(category_path) if f.lower().endswith('.wav')]
+        # --- 关键改动开始 ---
+        # 使用 os.walk() 递归遍历所有子文件夹
+        available_noises = []
+        for dirpath, _, filenames in os.walk(category_path):
+            for filename in filenames:
+                if filename.lower().endswith('.wav'):
+                    # 保存文件的完整相对路径，以便后续拼接
+                    full_path = os.path.join(dirpath, filename)
+                    available_noises.append(full_path)
+        # --- 关键改动结束 ---
+
         if not available_noises:
-            print(f"⚠️ 警告 (add_noise): 类别目录 '{category_path}' 中没有找到 .wav 文件，跳过此效果。")
+            print(f"⚠️ 警告 (add_noise): 类别目录 '{category_path}' 及其子目录中没有找到 .wav 文件，跳过此效果。")
             return y
 
-        selected_noise_file = random.choice(available_noises)
-        noise_path = os.path.join(category_path, selected_noise_file)
-        print(f"  - 随机选择噪音: {os.path.join(noise_category, selected_noise_file)}")
+        # 从所有找到的文件中随机选择一个
+        noise_path = random.choice(available_noises)
+        # 打印相对路径，更清晰
+        relative_noise_path = os.path.relpath(noise_path, noise_dir)
+        print(f"  - 随机选择噪音: {relative_noise_path}")
 
     elif noise_file:
-        # 向后兼容，如果只指定了单个文件
         noise_path = os.path.join(noise_dir, noise_file)
 
     elif use_white_noise:
-        # 使用白噪音
         noise = np.random.randn(len(y))
-        noise_path = None  # 确保后续代码不执行文件读取
+        noise_path = None
 
     else:
-        # 如果什么都没指定，直接返回
         return y
 
-    # 如果需要从文件加载噪音
     if noise_path:
         try:
             noise, sr_n = sf.read(noise_path)
@@ -65,7 +70,6 @@ def process(y, sr, use_white_noise=False, noise_category=None, noise_file=None, 
             print(f"⚠️ 警告 (add_noise): 找不到噪音文件 {noise_path}，跳过此效果。")
             return y
 
-        # 重采样和声道处理
         if sr_n != sr:
             noise = librosa.resample(noise.T, orig_sr=sr_n, target_sr=sr).T
         if noise.ndim > 1:
@@ -75,12 +79,10 @@ def process(y, sr, use_white_noise=False, noise_category=None, noise_file=None, 
             noise = np.tile(noise, reps)
         noise = noise[:len(y)]
 
-    # --- 核心计算逻辑 (保持不变) ---
     rms_signal = np.sqrt(np.mean(y ** 2)) + 1e-8
     rms_noise_target = rms_signal * (10 ** (noise_db / 20.0))
     rms_noise_current = np.sqrt(np.mean(noise ** 2)) + 1e-8
     noise_scaled = noise * (rms_noise_target / rms_noise_current)
 
-    # 混合并裁剪
     y_noisy = y + noise_scaled * wet
     return np.clip(y_noisy, -1.0, 1.0)
