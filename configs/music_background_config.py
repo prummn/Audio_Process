@@ -19,7 +19,7 @@ SCENE_CONFIG = {
         {
             "name": "change_volume",
             "params": {
-                "target_lufs": -30  # 音量降低12分贝，模拟距离衰减
+                "target_lufs": {"random_type": "uniform", "min": -45, "max": -30}  # 音量降低12分贝，模拟距离衰减
             }
         },
 
@@ -30,7 +30,7 @@ SCENE_CONFIG = {
                 # 假设你有一个名为 'music' 的噪音类别
                 "noise_category": "music",
                 # 响度设置得较低，确保是“背景”音乐
-                "noise_db": 5
+                "noise_db": {"random_type": "uniform", "min": 0, "max": 10}
             }
         },
 
@@ -38,11 +38,14 @@ SCENE_CONFIG = {
         {
             "name": "add_reverb",
             "params": {
-                "room_size": 0.4,   # 模拟中等大小的咖啡馆
-                "damping": 0.4,
-                "wet_level": 0.1,   # 混响非常轻微，避免声音模糊
-                "dry_level": 0.9
+                "room_size": {"random_type": "uniform", "min": 0.4, "max": 0.7},   # 模拟中等大小的咖啡馆
+                "damping": {"random_type": "uniform", "min": 0.4, "max": 0.6},
+                "wet_level": {"random_type": "uniform", "min": 0.1, "max": 0.3},   # 混响非常轻微，避免声音模糊
+                "dry_level": {"random_type": "uniform", "min": 0.7, "max": 0.9}
             }
+        },
+        {
+            "name": "adjust_speed",
         }
     ]
 }

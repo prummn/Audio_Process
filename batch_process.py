@@ -4,6 +4,7 @@ import importlib
 import librosa
 import soundfile as sf
 import copy
+import random  # 新增导入
 
 # --- 固定目录路径 ---
 INPUT_DIR = "data_input"
@@ -11,6 +12,35 @@ OUTPUT_DIR = "data_output"
 CONFIGS_DIR = "configs"
 NOISES_DIR = "noises"
 EFFECTS_PACKAGE = "effects"
+
+
+def _resolve_random_params(params_dict):
+    """
+    解析参数字典，将定义为范围的参数随机化为具体值。
+    这个函数会直接修改传入的字典。
+    """
+    for key, value in params_dict.items():
+        if isinstance(value, dict) and "random_type" in value:
+            rand_type = value.get("random_type")
+            try:
+                if rand_type == "uniform":
+                    min_val = value["min"]
+                    max_val = value["max"]
+                    params_dict[key] = random.uniform(min_val, max_val)
+                elif rand_type == "randint":
+                    min_val = value["min"]
+                    max_val = value["max"]
+                    params_dict[key] = random.randint(min_val, max_val)
+                elif rand_type == "choice":
+                    options = value["options"]
+                    params_dict[key] = random.choice(options)
+                # 在这里可以继续添加其他类型的随机化，如 log_uniform 等
+                else:
+                    print(f"  ⚠️ 未知的随机类型 '{rand_type}'，参数 '{key}' 将保持原样。")
+            except KeyError as e:
+                print(f"  ⚠️ 随机参数 '{key}' 缺少必要的键: {e}，将保持原样。")
+            except Exception as e:
+                print(f"  ⚠️ 处理随机参数 '{key}' 时出错: {e}，将保持原样。")
 
 
 def load_configs(config_dir, specific_configs=None):
@@ -28,11 +58,18 @@ def load_configs(config_dir, specific_configs=None):
     if specific_configs:
         # 如果用户指定了配置文件，则只加载这些
         for spec_name in specific_configs:
-            fname = f"{spec_name}.py"
-            if fname in available_files:
-                config_files_to_load.append(fname)
-            else:
+            fname = f"{spec_name}.py" if not spec_name.endswith('.py') else spec_name
+            fname_base = fname[:-3]
+
+            found = False
+            for available_file in available_files:
+                if available_file == fname or available_file.startswith(fname_base + '.'):
+                    config_files_to_load.append(available_file)
+                    found = True
+                    break
+            if not found:
                 print(f"⚠️ 警告：找不到指定的配置文件 '{fname}'，已跳过。")
+
     else:
         # 如果未指定，则加载所有
         config_files_to_load = available_files
@@ -70,13 +107,19 @@ def process_audio_file(filepath, output_path, effect_chain):
     processed_y = y
     for effect_config in effect_chain:
         effect_name = effect_config.get("name")
+        # 深拷贝一份参数，确保原始配置不被修改
         params = copy.deepcopy(effect_config.get("params", {}))
+
+        # --- 新增：解析并随机化参数 ---
+        _resolve_random_params(params)
+        # ---------------------------
 
         try:
             module_path = f"{EFFECTS_PACKAGE}.{effect_name}"
             effect_module = importlib.import_module(module_path)
             process_func = getattr(effect_module, "process")
 
+            # 特殊处理，注入全局依赖
             if effect_name == "add_noise":
                 params['noise_dir'] = NOISES_DIR
 
@@ -130,6 +173,7 @@ def main():
             filename = os.path.basename(input_path)
             output_path = os.path.join(scene_output_dir, filename)
             print(f"处理文件: {filename}")
+            # 注意：这里传入的是原始的 effect_chain
             process_audio_file(input_path, output_path, effect_chain)
 
     print("\n--- 所有任务完成 ---")

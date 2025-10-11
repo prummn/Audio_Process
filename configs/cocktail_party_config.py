@@ -8,16 +8,16 @@ SCENE_CONFIG = {
         {
             "name": "add_reverb",
             "params": {
-                "room_size": 0.4,
+                "room_size": {"random_type": "uniform", "min": 0.4, "max": 0.6},
                 "damping": 0.8,        # 墙壁吸收部分高频，声音更柔和
-                "wet_level": 0.4,      # 混响声的比例较高
-                "dry_level": 0.6       # 原始直达声的比例较低
+                "wet_level": {"random_type": "uniform", "min": 0.4, "max": 0.6},      # 混响声的比例较高
+                "dry_level": {"random_type": "uniform", "min": 0.4, "max": 0.6}       # 原始直达声的比例较低
             }
         },
         {
             "name": "change_volume",
             "params": {
-                "target_lufs": -30  # 音量降低12分贝，模拟距离衰减
+                "target_lufs": {"random_type": "uniform", "min": -30, "max": -10 }
             }
         },
         {
@@ -27,8 +27,11 @@ SCENE_CONFIG = {
                 "noise_category": "human_voice",
 
                 # 噪声只比信号低 10dB，非常嘈杂
-                "noise_db": 5
+                "noise_db": {"random_type": "uniform", "min": 0, "max": 10}
             }
-        }
+        },
+        # {
+        #     "name": "adjust_speed",
+        # }
     ]
 }
