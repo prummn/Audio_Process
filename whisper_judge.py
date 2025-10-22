@@ -24,7 +24,7 @@ import whisper
 model = whisper.load_model("turbo", device="cpu")
 
 # 输入目录
-input_dir = "./data_output/music_background_ambient"
+input_dir = "data_evalued/music_background_ambient"
 
 # 遍历目录下所有文件
 for filename in os.listdir(input_dir):

@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def process(y, sr, frame_ms=20, stutter_prob=0.05, repeat_prob=0.75, max_repeats=3):
+def process(y, sr, frame_ms=15, stutter_prob=0.05, repeat_prob=0.75, max_repeats=3):
     """
     通过随机“替换”音频帧来模拟卡顿效果，保持音频总长度不变。
 
